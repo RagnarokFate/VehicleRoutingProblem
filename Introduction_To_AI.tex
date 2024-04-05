@@ -1,0 +1,693 @@
+% Document class and packages
+\documentclass[letterpaper, 12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{titlesec}
+\usepackage{enumitem}
+
+\usepackage{amsmath, amssymb,lipsum,fancyhdr,graphicx,listings,xcolor,listings,color,array}
+
+% Page setup
+\geometry{margin=1in}
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\thepage}
+\lhead{\textit{Introduction To AI - Vehicle Routing Problem}}
+
+% Section and list formatting
+\titleformat{\section}[block]{\normalfont\Large\bfseries}{\thesection}{1em}{}[]
+\setlist[itemize]{left=0pt, label=--, itemsep=4pt}
+
+% Document information
+\title{Introduction To AI}
+\author{Bashar Beshoti (207370248)
+}
+\date{\today}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+\lstset{frame=tb,
+  language=Python,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  tabsize=3,
+  frame=single
+}
+
+\begin{document}
+
+% First page: Course details and author information
+\maketitle
+
+\section*{Course Information}
+\begin{itemize}
+    \item \textbf{Course Title:} Introduction To AI
+    \item \textbf{Course Code:} 324.3610
+    \item \textbf{Assignment :} Vehicle Routing Problem
+    \item     \textbf{Due Date : } 05.04.2024
+
+\end{itemize}
+
+
+\newpage
+
+\section*{Vehicle Routing Problem}
+\subsection*{Introduction}
+The Vehicle Routing Problem (VRP) is a combinatorial optimization problem that involves the efficient distribution of goods or services from a central depot to a set of geographically dispersed locations using a fleet of vehicles. The goal is to minimize the overall transportation cost, which can include factors such as distance traveled, time, etc.
+The problem is defined as follows, Given:
+
+\begin{enumerate}
+    \item Depot - A central location where the fleet of vehicles starts and returns after completing their routes.
+    \item Locations - Locations that require goods or services to be delivered.
+    \item Transportation cost - expenses incurred in moving from one location to another, encompassing factors like fuel, vehicle maintenance, labor, and associated logistical expenses.
+    \item Constraints - Various constraints need to be satisfied, such as vehicle capacity constraints (a vehicle cannot exceed its maximum capacity) or window time that the location must be visited.
+    \item Objective: Minimize the total cost of the delivery routes
+\end{enumerate}
+
+In this assignment we'll focus on VRP with 2 factors of transformation costs - distance and time traveled and no constraints.\\
+
+\subsection*{Class VRP}
+We'll start with defining class VRP - an instance that parses the data file and holds all neccesary data of the VRP.
+
+1. fill in the function *compute\_distance\_matrix*
+\begin{lstlisting}
+# ~~~~TODO 1: fill in this method to initialize the distance matrix~~~~
+  def compute_distance_matrix(self):
+        dis_mtx = np.zeros((self.dim, self.dim))
+        for i in range(self.dim):
+            for j in range(self.dim):
+                dis_mtx[i, j] = np.sqrt((self.locations[i][0] - self.locations[j][0]) ** 2 +
+                                        (self.locations[i][1] - self.locations[j][1]) ** 2)
+        return dis_mtx
+\end{lstlisting}
+
+
+2. fill in the function *plot locations*
+\begin{lstlisting}
+#~~~~ TODO 2: plot locations ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  def plot_locations(self):
+    plt.figure(figsize=(8, 6))
+    plt.scatter(self.locations[:, 0], self.locations[:, 1], color='blue', label='Locations')
+    plt.xlabel('X Coordinate')
+    plt.ylabel('Y Coordinate')
+    plt.title('Locations')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+    pass
+\end{lstlisting}
+3. fill in the function *plot\_routes*
+\begin{lstlisting}
+# ~~TODO 3: Plot routes, each route hold ordered locations to visit~~~~
+#   Note: Make sure to add depot to the start and end of each route
+def plot_routes(self, routes):
+    plt.figure(figsize=(8, 6))
+    plt.scatter(self.locations[:, 0], self.locations[:, 1], color='blue', label='Locations')
+
+    for route in routes:
+        # Add depot to the start and end of each route
+        route_with_depot = [0] + route + [0]
+        route_coords = [self.locations[i] for i in route_with_depot]
+        route_coords = np.array(route_coords)
+        plt.plot(route_coords[:, 0], route_coords[:, 1], marker='o')
+
+    plt.xlabel('X Coordinate')
+    plt.ylabel('Y Coordinate')
+    plt.title('Routes')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+  pass
+\end{lstlisting}
+4. fill in the function *compute\_route\_distance*
+\begin{lstlisting}
+#~~~ TODO 4: given a route calculate the distance it took to travel~~~~
+  def compute_route_distance(self, route):
+    distance = 0
+    for i in range(len(route) - 1):
+        distance += self.dis_mtx[route[i], route[i+1]]
+    # Add distance from the last location back to the depot
+    distance += self.dis_mtx[route[-1], 0]
+    return distance
+\end{lstlisting}
+5. fill in the function *compute\_route\_time*
+\begin{lstlisting}
+  # TODO 5: given a route calculate the distance it took to travel~~~~~~
+  def compute_route_time(self, route):
+    time = 0
+    for i in range(len(route) - 1):
+        time += self.time_mtx[route[i], route[i+1]]
+    # Add time from the last location back to the depot
+    time += self.time_mtx[route[-1], 0]
+    return time
+\end{lstlisting}
+
+\subsection*{Particle swarm optimization}
+Particle swarm optimization (PSO) is one of the bio-inspired algorithms and it is a simple one to search for an optimal solution in the solution space. Each particle adjusts its position and velocity based on its own experience and shared knowledge within the swarm. The algorithm iteratively refines solutions, striking a balance between global exploration and local exploitation.
+
+pseudo-code for Particle Swarm Optimization (PSO):
+
+1. Initialization:
+
+\begin{enumerate}
+    \item Initialize a swarm of particles with random positions and velocities.
+    \item Initialize personal best positions for each particle as their current positions.
+    \item Initialize the global best position as the best position among all particles.
+\end{enumerate}
+2. Main Loop: Repeat until convergence or a maximum number of iterations:
+
+\begin{enumerate}
+    \item For each particle in the swarm:
+    \begin{enumerate}
+    \item Evaluate the fitness of the current position.
+    \item If the fitness is better than the personal best -> Update the personal best position.
+    \item If the fitness is better than the global best ->Update the global best position
+    \end{enumerate}
+    \item Update the velocity and position using the formula:  
+\[v_{t+1}=w_tv_t+c_1r_1(p_{best,i}−x_i)+c_1r_1(g_{best}−x_i)\]
+    \item update positions :  $x_{i+1}=x_i+v_{i+1}$
+\end{enumerate}
+3. Return global bet position
+\begin{lstlisting}
+def pso(s, d, lb, ub, c1, c2, maxiter ,obj_func, wupdate_func):
+    #:param s: number of particles
+    #:param d: dimension of a particle
+    #:param lb: lower bound in the search space
+    #:param ub: upper bound in the search space
+    #:param c1: constant for velocity update
+    #:param c2: constant for velocity update
+    #:param maxiter: maximum number of iteration defined to run
+    #:param obj_func: function to evaluate particle position
+    #:param wupdate_func: function to update the velocity weight
+
+    # initialize swarm
+    p = np.random.rand(s, d)   # particle positions
+    v = np.zeros_like(p)       # particle velocities
+    bp = p                     # best particle positions
+    f_p = np.zeros(s)          # current particle function values
+    f_bp = np.ones(s) * np.inf # best particle function values
+    gp = []                    # best swarm position
+    f_gp = np.inf              # best swarm position starting value
+
+    # Initialize the particle's position
+    p = lb + p * (ub - lb)
+
+    # Initialize the multiprocessing module if necessary
+    processes = 5
+    mp_pool = multiprocessing.Pool(processes)
+
+    # Calculate objective function
+    f_p = np.array(mp_pool.map(obj_func, p))
+    f_bp = f_p.copy()
+
+    # Update swarm's best position
+    i_min = np.argmin(f_p)
+    if f_p[i_min] < f_gp:
+        f_g = f_p[i_min]
+        gp = p[i_min, :].copy()
+
+    # Initialize the particle's velocity
+    v = -1 + np.random.rand(s, d) * 2
+
+    # Iterate until termination criterion met
+    it = 1
+    print("Running...")
+    while it <= maxiter and np.std(f_p)>1:
+      r1 = np.random.uniform(size=(s, d))
+      r2 = np.random.uniform(size=(s, d))
+
+      # Update the particles velocities
+      w = wupdate_func(it)
+      v = w * v + c1 * r1 * (bp - p) + c2 * r2 * (gp - p)
+
+      # Update the particles' positions
+      p = p + v
+
+      # Correct for bound violations
+      maskl = p < lb
+      masku = p > ub
+      p = p * (~np.logical_or(maskl, masku)) + lb * maskl + ub * masku
+
+      # Update objectives
+      f_p = np.array(mp_pool.map(obj_func, p))
+
+      # Store particle's best position
+      i_update = (f_p < f_bp)
+      bp[i_update, :] = p[i_update, :].copy()
+      f_bp[i_update] = f_p[i_update]
+
+      # Compare swarm's best position with global best position
+      i_min = np.argmin(f_bp)
+      if f_bp[i_min] < f_gp:
+          gp = bp[i_min, :].copy()
+          f_gp = f_p[i_min]
+
+      it += 1
+    print("Finshed run")
+    return gp, f_gp
+\end{lstlisting}
+
+To run the pso provided we need to define two functions:
+
+\begin{enumerate}
+    \item wupdate\_func - updating w for velocity computation
+    \item obj\_func - How we evaluate a particle
+\end{enumerate}
+
+\subsubsection*{Define how we update w in each iteration?} 
+In Particle Swarm Optimization (PSO), w represents the inertia weight. The inertia weight is a parameter used to control the trade-off between exploration and exploitation during the optimization process.\\
+
+The inertia weight influences the particle's velocity update formula in PSO. The velocity update equation for a particle i in a given iteration is typically defined as follows:
+ \[v_{t+1} = w_{t}v_{t} + c_1  r_1(p_{best,i} - x_i) +c_1 r_1 (g_{best} - x_i)\]
+ \newpage
+ 
+\textbf{1. Fill in the function $w\_update$ to compute $w_i$} \\
+\begin{lstlisting}
+def w_update(w_min ,w_max, max_iter, i):
+  return w_max - ((w_max - w_min) / max_iter) * i
+\end{lstlisting}
+Parameters:
+\begin{enumerate}
+    \item This function takes four arguments:
+    \item $w_min$: Lower bound for the inertia weight.
+    \item $w_max$: Upper bound for the inertia weight.
+    \item $max_iter$: Maximum number of iterations planned for the PSO run.
+    \item $i$: Current iteration number.
+\end{enumerate}
+Explanation : Computes the inertia weight w at the current iteration. The function implements a linear decrease of w from $w_{max}$ to $w_{min}$ as the number of iterations increases. This approach balances exploration and exploitation during the PSO search.\\
+
+
+\textbf{2. How does the inertia weight impact the trade-off between exploration and exploitation?} \\
+
+Impact of Inertia Weight on Exploration-Exploitation:
+\begin{itemize}
+    \item \textbf{Exploration}: A higher inertia weight allows particles to maintain a larger velocity, encouraging them to explore different regions of the search space and potentially discover new promising areas.
+    \item \textbf{Exploitation}: A lower inertia weight reduces the influence of the previous velocity, causing particles to converge towards the best positions found so far. This helps refine solutions and exploit promising areas more thoroughly.
+\end{itemize}
+
+\textbf{3. Suggest a second version to update the inertia weight, how is it different from the first one?} \\
+\begin{lstlisting}
+def wupdate_clerc_kennedy(iteration, w_max, w_min):
+# Faster exponential decay factor 
+  decay_factor = 2  # Higher value leads to faster decrease
+
+  # Generate random number between 0 and 2
+  a = np.random.rand()
+
+  # Base inertia weight update
+  w = w_max - a * abs(w_max - w_min)
+
+  # Apply faster exponential decay
+  w = w * np.exp(-decay_factor)
+
+  w = np.clip(w,w_min,w_max)
+
+  return w
+
+\end{lstlisting}
+
+\subparagraph{Differences:}
+
+\begin{itemize}
+    \item The linear approach offers a more intuitive understanding of the weight change based on the iteration number.
+    \item The Clerc and Kennedy (2002) approach might introduce a slightly faster decrease (Exponential decrease) in inertia weight in the initial iterations.
+\end{itemize}
+
+
+\subsection*{Defining an objective function}
+In this section you'll need to implement an objective function to evaluate the particle position with regard to the vrp instance. Each particle is an array with d elements:
+
+\begin{itemize}
+    \item d - number of locations (depot not included).
+    \item Each element holds a value in range [lb, ub] where lower bound will be set to 0 and upper bound will be set to max number of routes allowed.
+\end{itemize}
+
+
+ \subsubsection*{1. Discretization}
+Particle Swarm Optimization (PSO) is generally well-suited for continuous optimization problems due to its mathematical formulation involving continuous variables and velocity updates. However, it can also be adapted for discrete optimization tasks through specific modifications and strategies.
+
+Discretization techniques can be applied to continuous PSO solutions to convert them into valid discrete solutions. This involves rounding or mapping continuous values to the nearest valid discrete values in the solution space.
+
+Fill in method $disctetization(x, lb, ub)$ to return a discrete x Note: Use make sure that values are in range  $[lb,ub]$.\\
+
+\begin{lstlisting}
+def discretization(x, lb, ub):
+  return np.clip(np.round(x), lb, ub)
+\end{lstlisting}
+
+ \subsubsection*{2. Split into assigned route}
+After processing into discrete domain, we have a representation of a solution for the VRP, Each value in the array corresponds to a route number for that location. For example, given an array [0,1,2,1,2] corresponds to a solution where we assign locations to routes in the following way: \\
+
+location 1 -> route 0, location 2 -> route 1, location 3 -> route 2, location 4 -> route 1.\\
+
+\textbf{Result:} 
+route 0 will visit location 1, route 1 will visit locations 2,4 and route 2 will visit location 3. \\
+
+Fill in the function $split\_into\_assigned\_route$ that given a an array splits the array into route-assignments as described above and return the route-assignments.
+
+\begin{lstlisting}
+def split_into_assigned_routes(a, ub):
+    assigned_routes = {}
+
+    for i, route in enumerate(a):
+        # route_index = np.round(route)
+        route_index = int(route)
+        if route_index not in assigned_routes:
+            assigned_routes[route_index] = [i]
+        else:
+            assigned_routes[route_index].append(i)
+
+    for i in range(ub + 1):
+        assigned_routes.setdefault(i, [])
+
+    return assigned_routes
+
+\end{lstlisting}
+
+\subsubsection*{3. Best route for assignment}
+After splitting the array into route-assignments,for each assignment we want to find a good order to visit each of the assigned locations starting and ending in the depot- in other words, TSP. A good order will have to factor both distance and time. Choosing the next location based only on distance may lead to longer time (perhaps there's a traffic jam). \\
+
+On the other hand - choosing only based on time may lead to longer distance (perhaps another road will take a little longer but the distance is significantly smaller). \\
+
+Using methods you've learned in lecture, implement a function to find this route for an assignment. \\
+
+\begin{lstlisting}
+def find_order_for_assignment(locations, vrp):
+    if not locations:
+        return [0]  
+
+    def distance(location1, location2):
+        return vrp.dis_mtx[location1][location2]
+
+    current_route = locations[:]
+    n = len(current_route)
+
+    def two_opt(route):
+        best_distance = calculate_route_distance(route)
+        improved = True
+        while improved:
+            improved = False
+            for i in range(1, n - 2):
+                for j in range(i + 1, n):
+                    if j - i == 1:
+                        continue
+                    new_route = route[:]
+                    new_route[i:j + 1] = reversed(new_route[i:j + 1])  # Apply 2-opt exchange
+                    new_distance = calculate_route_distance(new_route)
+                    if new_distance < best_distance:
+                        route[:] = new_route[:]
+                        best_distance = new_distance
+                        improved = True
+                        break
+                if improved:
+                    break
+        return route
+
+    def calculate_route_distance(route):
+        total_distance = 0
+        for i in range(n - 1):
+            total_distance += distance(route[i], route[i + 1])
+        return total_distance
+
+    current_route = two_opt(current_route)
+
+    current_route.insert(0, 0)
+    current_route.append(0)
+
+    return current_route
+
+
+\end{lstlisting}
+
+\subsubsection*{4. Integrate all the methods above into an objective function}
+Using all the functions you've implemented, implement an objective function The function need to return a value indicating how good/bad the particle is. \\
+
+\begin{lstlisting}
+def objective_function(vrp, lb, ub, particle):
+    discrete_solution = discretization(particle, lb, ub)
+
+    route_assignments = split_into_assigned_routes(discrete_solution, ub)
+
+    total_cost = 0
+    weight_distance = 0.5  
+    weight_time = 1 - weight_distance
+
+    for route, locations in route_assignments.items(): 
+        ordered_route = find_order_for_assignment(locations, vrp)
+
+        route_distance = vrp.compute_route_distance(ordered_route)
+
+        route_time = vrp.compute_route_time(ordered_route)
+
+        route_cost = weight_distance * route_distance + weight_time * route_time
+
+        total_cost += route_cost
+
+    return total_cost
+
+
+\end{lstlisting}
+
+\subsubsection*{5. Answer Questions}
+\paragraph{1.A What is the role of particles, positions, velocities, and fitness evaluation in PSO when solving the VRP. }
+\begin{enumerate}
+    \item Particles: Each particle in a PSO swarm represents a potential solution to the VRP problem. It typically encodes the route assignments for all locations.
+    \item Positions: The position of a particle defines the specific route assignments it currently suggests. This position could be represented in various ways, such as a list of route indices for each location or a permutation of all locations.
+    \item Velocities: The velocity of a particle determines the direction and magnitude of change in its position during the optimization process. It influences how a particle explores the search space and potentially moves towards better solutions.
+    \item Fitness Evaluation: Each particle's fitness is evaluated using an objective function. This function measures the quality of the solution represented by the particle's position. In the context of VRP, the objective function might consider factors like total distance traveled, travel time, or a combination of both.
+\end{enumerate}
+
+\paragraph{1.B. How are these elements utilized in finding the optimal or near-optimal solutions?}
+
+\begin{enumerate}
+    \item Initialization: A swarm of particles is created, with each particle having a random position and velocity.
+    \item Fitness Evaluation: The objective function is used to calculate the fitness score for each particle in the swarm.
+    \item Updating Velocity: The velocity of each particle is updated based on its current velocity, the fitness of its own best position (\textbf{pbest}), and the fitness of the global best position (\textbf{gbest}) found so far in the swarm. This update incorporates both exploration and exploitation.
+    \item Updating Position: Using the updated velocity, the position of each particle is moved in the search space. This can involve modifying the route assignments based on the velocity values.
+    \item Iteration: Steps 2 to 4 are repeated for a predefined number of iterations, allowing particles to explore and potentially converge towards better solutions.
+\end{enumerate}
+
+The combination of these elements gives a deep look of the search process. Particles explore the search space due to their velocities, and the fitness evaluation lead them towards areas with better solutions as defined by the objective function. The influence of \textbf{pbest} and \textbf{gbest} encourages both individual exploration and convergence towards promising regions discovered by the swarm. \\
+
+\paragraph{2. Suggest your own way to represent a particle for the VRP problem.\\} Describe the objective function for the new representation. \\
+
+ Instead of iterating through route indices, it would iterate through the permutation. It would calculate the cost of the entire route based on the order of locations in the permutation, considering factors like distance and travel time between consecutive locations.\\
+
+For example:Let the permutation be [2, 1, 4, 3, 0]. Therefore :
+\begin{itemize}
+    \item Location 2 is assigned to the first route.
+    \item Location 1 is assigned to the second route (as it appears next in the permutation).
+\end{itemize}
+
+The objective function would calculate the total cost of the route by summing the distances/travel times between locations in the following order:\\
+
+Depot -> Location 2 , Location 2 -> Location 1 ,Depot -> Location 4 , Location 4 -> Location 3 , Location 3 -> Depot. \\
+
+\paragraph{3. Explain the concept of local and global best solutions in PSO. How are these solutions utilized during the optimization process of the VRP?\\} 
+
+
+\textbf{A. Local and Global Best Solutions in PSO:}
+\begin{itemize}
+    \item Local Best (pbest): The best position a specific particle has encountered in its own search. It represents the particle's personal best solution found so far.
+    \item Global Best (gbest): This represents the best position discovered by the entire swarm during the optimization process. It's essentially the best solution found among all particles.
+\end{itemize}
+
+
+\textbf{B. Utilizing Local and Global Best:}
+
+\begin{itemize}
+    \item During velocity update, a particle considers both its own pbest and the global gbest. This allows particles to:
+        A. Explore based on their own experience (pbest).\\
+        B. Be influenced by promising solutions discovered by the swarm (gbest), potentially leading them towards better areas of the search space.\\
+    \item This balance between exploration and exploitation helps PSO avoid getting stuck in local optima and potentially converge towards more optimal solutions.
+\end{itemize}
+
+\section*{MAIN}
+Now that we have all our ducks in order, Let's run the PSO algorithm on VRP instance.
+
+\begin{lstlisting}
+import functools
+
+#Initializing vrp instance
+path = '/content/drive/MyDrive/HW1-Datasets/Ex1-d5'
+vrp = VRP(path)
+
+# Defining parameter for the run
+SWARM_SIZE = ##
+MAX_ROUTES = ##
+C1 = ##
+C2 = ##
+W_MIN = ##
+W_MAX = ##
+MAX_ITER = ##
+
+# Define functions to pass to pso
+pso_obj_func = functools.partial(objective_function, vrp, 0, MAX_ROUTES-1)
+pso_w_update = functools.partial(w_update, W_MIN ,W_MAX, MAX_ITER)
+
+
+# Run PSO
+sol,f_sol = pso(s = SWARM_SIZE,
+            d = vrp.dim-1,
+            lb = 0,
+            ub = MAX_ROUTES - 1,
+            c1 = C1,
+            c2 = C2,
+            maxiter = MAX_ITER,
+            obj_func = pso_obj_func,
+            wupdate_func = pso_w_update)
+
+# Print and plot solution
+d_sol = discretization(sol,0,MAX_ROUTES-1)
+route_assignments = split_into_assigned_routes(d_sol,MAX_ROUTES-1)
+sol = [find_order_for_assignment(r, vrp) for r in route_assignments]
+
+
+vrp.plot_routes(sol)
+vrp.print_routes(sol)
+\end{lstlisting}
+
+\subsection*{1. Define parameters for the algorithm and run the PSO algorithm on the given data sets.}
+\textbf{Explanation:}
+
+\textbf{VRP Instance:} The code assumes you have set the \verb|path| variable correctly to point to the data file for the VRP instance you want to solve (e.g., \verb|Ex1-d5|).
+\textbf{Parameters:}
+
+    \begin{enumerate}
+        \item \verb|SWARM_SIZE|: Number of particles in the swarm (set to 50 here).
+        \item \verb|MAX_ROUTES|: Maximum number of allowed routes (set to 5 here).
+        \item \verb|C1| and \verb|C2|: PSO constants for velocity update.
+        \item \verb|W_MIN| and \verb|W_MAX|: Minimum and maximum values for the inertia weight.
+        \item \verb|MAX_ITER|: Maximum number of iterations for the PSO algorithm.
+    \end{enumerate}
+
+\textbf{Function Definitions:}
+
+\begin{itemize}
+        \item \verb|pso_obj_func|: This is a partial function that binds the \verb|objective_function|.
+        \item \verb|pso_w_update|: This is a partial function that binds the \verb|w_update|.
+\end{itemize}
+
+\textbf{Running PSO:} The \verb|pso| function is called with the defined parameters, objective function, and weight update function. It returns the best solution found (\verb|sol|) and its corresponding objective function value (\verb|f_sol|).
+
+\textbf{Algorithms and functions:}
+\begin{itemize}
+        \item \verb|discretization|: Discretizes the continuous solution (\verb|sol|) to valid route assignments.
+        \item \verb|split_into_assigned_routes|: Splits the discretized solution into individual routes.
+        \item \verb|find_order_for_assignment|: Optimizes the order of locations within each route using a 2-opt heuristic.
+        \item \verb|vrp.plot_routes|: Plots the optimized routes on a map.
+        \item \verb|vrp.print_routes|: Prints details about each route, including distance and travel time.
+\end{itemize}
+
+\subsection*{2. Report how different parameters influence the solution quality and the run-time.}
+
+\begin{table}[htbp]
+    \centering
+\caption{Parameters versus Solution Quality \& Runetime }
+    \begin{tabular}{|>{\centering\arraybackslash}p{0.25\linewidth}|>{\centering\arraybackslash}p{0.25\linewidth}|>{\centering\arraybackslash}p{0.25\linewidth}|} \hline 
+         Parameter&  Solution Quality& Runtime\\ \hline 
+         SWARM\_SIZE&  Increasing the swarm size, the higher probability of finding a good solution by exploring a wider search space.& A larger swarm size requires more computations per iteration, increasing the overall runtime.\\ \hline 
+         MAX\_ITER&  More iterations allow the PSO to explore a larger portion of the search space and probably find a better solution.& Runtime increases linearly with the number of iterations as more iterations needed to do.\\ \hline 
+         (W\_MIN, W\_MAX)&  A high initial inertia weight (W\_MAX) promotes exploration. While A low final inertia weight (W\_MIN) encourages exploitation& No effect on runtime.\\ \hline 
+         C1&  A higher C1 value emphasizes a particle's own experience& No effect on runtime.\\ \hline 
+         C2&  A higher C2 value emphasizes the swarm's knowledge& No effect on runtime.\\ \hline
+    \end{tabular}
+    
+    
+\end{table}
+
+
+\subsection*{3. Submit your best results for each of the given data sets.}
+
+\subsubsection{Ex1-d5}
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.75\linewidth]{Ex1-d5.png}
+    
+    
+\end{figure}
+
+\begin{lstlisting}
+vehicle 1 route: depot ->0 -> 0 -> 0 -> depot
+Distance for vehicle 1 r_distance=0.0, Time traveled = 0.0
+vehicle 2 route: depot ->0 -> 0 -> 1 -> 2 -> 3 -> 4 -> 0 -> depot
+Distance for vehicle 2 r_distance=6.242640687119285, Time traveled = 6.229999999999997
+vehicle 3 route: depot ->0 -> depot
+Distance for vehicle 3 r_distance=0.0, Time traveled = 0.0
+vehicle 4 route: depot ->0 -> depot
+Distance for vehicle 4 r_distance=0.0, Time traveled = 0.0
+vehicle 5 route: depot ->0 -> depot
+Distance for vehicle 5 r_distance=0.0, Time traveled = 0.0
+Total Distance is: 6.242640687119285, Total Time = 6.229999999999997
+\end{lstlisting}
+
+\subsubsection{Ex2-d22}
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.75\linewidth]{Ex2-d22.png}
+    
+    
+\end{figure}
+\begin{lstlisting}
+i forgot to copy routes print :)
+Total Distance is: 366.4285625707137, Total Time = 113.75
+
+\end{lstlisting}
+
+Another run with routes print :
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.75\linewidth]{Ex2-d22_2.png}
+    
+    
+\end{figure}
+\begin{lstlisting}
+vehicle 1 route: depot ->0 -> 0 -> 16 -> 14 -> 19 -> 21 -> 17 -> 20 -> 18 -> 15 -> 12 -> 9 -> 7 -> 5 -> 1 -> 2 -> 3 -> 4 -> 6 -> 8 -> 10 -> 11 -> 0 -> depot
+Distance for vehicle 1 r_distance=290.531859134782, Time traveled = 111.22999999999999
+vehicle 2 route: depot ->0 -> 13 -> 0 -> depot
+Distance for vehicle 2 r_distance=32.0624390837628, Time traveled = 6.8100000000000005
+vehicle 3 route: depot ->0 -> depot
+Distance for vehicle 3 r_distance=0.0, Time traveled = 0.0
+vehicle 4 route: depot ->0 -> depot
+Distance for vehicle 4 r_distance=0.0, Time traveled = 0.0
+vehicle 5 route: depot ->0 -> depot
+Distance for vehicle 5 r_distance=0.0, Time traveled = 0.0
+Total Distance is: 322.5942982185448, Total Time = 118.03999999999999
+\end{lstlisting}
+
+\subsubsection{Ex3-d33}
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.75\linewidth]{Ex3-d33.png}
+    
+    
+\end{figure}
+
+\begin{lstlisting}
+vehicle 1 route: depot ->0 -> 0 -> 3 -> 4 -> 5 -> 7 -> 6 -> 8 -> 9 -> 10 -> 11 -> 12 -> 2 -> 1 -> 13 -> 14 -> 15 -> 17 -> 19 -> 18 -> 21 -> 20 -> 16 -> 0 -> depot
+Distance for vehicle 1 r_distance=404.5910687601283, Time traveled = 128.27
+vehicle 2 route: depot ->0 -> depot
+Distance for vehicle 2 r_distance=0.0, Time traveled = 0.0
+vehicle 3 route: depot ->0 -> depot
+Distance for vehicle 3 r_distance=0.0, Time traveled = 0.0
+vehicle 4 route: depot ->0 -> depot
+Distance for vehicle 4 r_distance=0.0, Time traveled = 0.0
+vehicle 5 route: depot ->0 -> depot
+Distance for vehicle 5 r_distance=0.0, Time traveled = 0.0
+Total Distance is: 404.5910687601283, Total Time = 128.27
+\end{lstlisting}
+
+
+
+\end{document}
